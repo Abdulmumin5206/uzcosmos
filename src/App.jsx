@@ -1,967 +1,582 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, createContext, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Activity,
-  Crosshair,
-  MessageSquare,
-  AlertOctagon,
-  Download,
-  Satellite,
-  X,
-  Package,
-  Users,
-  CheckCircle,
-  ArrowUpRight,
-} from 'lucide-react';
+import { Satellite, Download, Rocket, CheckCircle, Users, FileText, Search, Zap, Target, TrendingUp, Shield, Calendar } from 'lucide-react';
+import T from './translations';
 
-/* ─── Phase Data ────────────────────────────────────────────────────────────── */
+/* ─── Language context ───────────────────────────────────────────────────────── */
+const LangCtx = createContext('en');
+const useLang = () => useContext(LangCtx);
 
-const PHASES = [
-  {
-    id: 1,
-    name: 'Mission Definition',
-    duration: 'Months 1–3',
-    shortDesc: 'Define what this satellite does and why.',
-    milestones: [
-      {
-        period: 'Month 1',
-        label: 'Stakeholder Kickoff',
-        detail: 'Align leadership on mission intent, constraints, and success criteria',
-      },
-      {
-        period: 'Month 2',
-        label: 'Payload Trade Study',
-        detail: 'Evaluate and score payload options against mission goals and budget',
-      },
-      {
-        period: 'Month 3',
-        label: 'Requirements Freeze',
-        detail: 'Mission Requirements Document signed, baselined, and distributed',
-      },
-    ],
-    whatHappens: [
-      'Stakeholder workshops to align on mission goals and political context',
-      'Research comparable satellite missions — lessons learned from 3+ reference programs',
-      'Evaluate payload options: Earth observation, AIS ship tracking, technology demonstration',
-      'Formal documentation of mission requirements in the MRD',
-      'Establish launch date as hard constraint or planning target',
-    ],
-    deliverables: [
-      'Mission Requirements Document (MRD) — baselined and formally signed',
-      'Payload Trade Study Report — scoring matrix and final recommendation',
-      'Comparable Mission Analysis — reference programs and lessons learned',
-      'Project Charter and initial Work Breakdown Structure (WBS)',
-    ],
-    team: [
-      'Mission Systems Engineer — lead author of MRD and trade studies',
-      'Payload Specialist — drives payload evaluation and scoring criteria',
-      'Program Manager — stakeholder coordination and schedule oversight',
-      'Science / Application Lead — defines end-user data needs',
-    ],
-    successCriteria: [
-      'MRD formally approved and signed by all stakeholders',
-      'Primary mission objective agreed with zero ambiguity',
-      'Payload type down-selected to a single preferred option',
-      'Launch date constraint documented and accepted by leadership',
-    ],
-    criticalDecision:
-      'What is the primary mission of this satellite? This must be locked before any hardware decisions can be made. A change after Month 3 triggers a full architecture re-evaluation.',
-    leadershipQuestions: [
-      'What problem are we solving, and for whom specifically?',
-      'Who are the end users of the data this satellite produces?',
-      'Is the 2028 launch date a hard deadline or a planning target?',
-      'Are there political or funding constraints that affect mission scope?',
-    ],
-    riskIfDelayed:
-      'Every week of delay here costs two weeks downstream. Hardware cannot be ordered without a locked mission — and vendors book out months in advance. A 1-month slip in Phase 1 typically causes a 2–3 month slip in Phase 2, compounding into a missed launch window.',
-  },
-  {
-    id: 2,
-    name: 'System Design & Vendor Selection',
-    duration: 'Months 4–8',
-    shortDesc: 'Design the system and choose our hardware partners.',
-    milestones: [
-      {
-        period: 'Months 4–5',
-        label: 'Architecture Defined',
-        detail: 'Satellite system architecture documented and internally reviewed',
-      },
-      {
-        period: 'Months 6–7',
-        label: 'RFP Process',
-        detail: 'RFPs issued, proposals received, technical evaluation completed',
-      },
-      {
-        period: 'Month 8',
-        label: 'Vendor Down-Select',
-        detail: 'Preferred vendor selected, System Design Document finalized',
-      },
-    ],
-    whatHappens: [
-      'Define satellite architecture based on locked mission requirements',
-      'Research COTS vendors: NanoAvionics, EnduroSat, GomSpace, and others',
-      'Issue formal Requests for Proposal (RFPs) to shortlisted vendors',
-      'Conduct technical and commercial evaluation of received proposals',
-      'Select preferred vendor and finalize System Design Document',
-    ],
-    deliverables: [
-      'System Architecture Document (SAD) — internal review complete',
-      'Request for Proposal (RFP) package — issued to 3+ vendors',
-      'Vendor Evaluation Matrix and formal recommendation report',
-      'System Design Document (SDD) — baselined after vendor selection',
-    ],
-    team: [
-      'Systems Engineer — architecture definition and SDD lead author',
-      'Procurement Officer — RFP drafting and vendor communications',
-      'Technical Evaluation Panel — multi-discipline proposal review',
-      'Legal / Contracts Advisor — terms and compliance review',
-    ],
-    successCriteria: [
-      'System Design Document signed and baselined',
-      'Single vendor selected with written justification on file',
-      'Procurement timeline confirmed and aligned with budget cycle',
-      'All architectural trade studies closed — no open decisions remain',
-    ],
-    criticalDecision:
-      'Which vendor do we partner with, and what exactly are we procuring vs. developing in-house? This determines cost, schedule, and technical risk for the entire program.',
-    leadershipQuestions: [
-      'Are there political or regulatory restrictions on supplier countries?',
-      'What is the procurement approval process and expected timeline?',
-      'Is there flexibility in the budget if the preferred vendor is higher cost?',
-    ],
-    riskIfDelayed:
-      'Launch slots book out 12–18 months in advance. A delay here means missing the 2028 window entirely — with no fallback option. Every month of delay in vendor selection pushes hardware delivery later, leaving no margin for testing.',
-  },
-  {
-    id: 3,
-    name: 'Procurement & Integration',
-    duration: 'Months 9–16',
-    shortDesc: 'Order hardware, build and integrate the satellite.',
-    milestones: [
-      {
-        period: 'Months 9–10',
-        label: 'Purchase Orders Placed',
-        detail: 'All hardware contracts signed, delivery schedule confirmed with vendors',
-      },
-      {
-        period: 'Months 11–14',
-        label: 'Integration Campaign',
-        detail: 'Subsystems delivered, assembled, and electrically connected and tested',
-      },
-      {
-        period: 'Months 15–16',
-        label: 'Functional Testing',
-        detail: 'Integrated satellite functional tests complete; launch contract signed',
-      },
-    ],
-    whatHappens: [
-      'Place hardware orders and actively manage delivery schedule',
-      'Integrate subsystems: structure, power, ADCS, comms, and payload',
-      'Begin ground station design, procurement, and RF link testing',
-      'Develop flight software to version 1.0 testable build',
-      'Sign launch services contract — hard deadline of Month 12',
-    ],
-    deliverables: [
-      'Signed purchase orders for all subsystems — on file',
-      'Integration and Assembly procedure documentation',
-      'Flight software v1.0 — functional testable build',
-      'Launch services contract — signed no later than Month 12',
-    ],
-    team: [
-      'Integration & Assembly Engineer — leads physical satellite build',
-      'Flight Software Developer — onboard software development lead',
-      'Ground Systems Engineer — ground station design and setup',
-      'Supply Chain Manager — hardware delivery tracking and escalation',
-    ],
-    successCriteria: [
-      'All hardware received, inspected, and accepted — no critical shortfalls',
-      'Satellite mechanically and electrically integrated as a system',
-      'Launch provider contract signed no later than Month 12',
-      'Ground station preliminary design complete and site confirmed',
-    ],
-    criticalDecision:
-      'Launch provider selected and contract signed no later than Month 12. This is the hardest deadline in the entire program. Missing it means no launch in 2028.',
-    leadershipQuestions: [
-      'Is the full hardware procurement budget approved and released?',
-      'What is the confirmed ground station location and infrastructure?',
-      'Is there a contingency plan if a key subsystem is delayed by the vendor?',
-    ],
-    riskIfDelayed:
-      'Hardware lead times run 6–9 months. Orders placed late cannot be expedited — vendors will not hold slots. A missed procurement window means a missed launch. There is no substitute for time in hardware manufacturing.',
-  },
-  {
-    id: 4,
-    name: 'Testing & Verification',
-    duration: 'Months 17–22',
-    shortDesc: 'Test everything until it breaks, then fix it.',
-    milestones: [
-      {
-        period: 'Months 17–18',
-        label: 'Environmental Testing',
-        detail: 'Vibration, thermal vacuum (TVAC), and EMC campaigns completed',
-      },
-      {
-        period: 'Months 19–21',
-        label: 'Software Validation',
-        detail: 'Flight software tested end-to-end; all anomalies resolved',
-      },
-      {
-        period: 'Month 22',
-        label: 'Pre-Ship Review',
-        detail: 'Formal review board convenes; go/no-go decision recorded in writing',
-      },
-    ],
-    whatHappens: [
-      'Vibration testing to simulate launch acoustic and mechanical loads',
-      'Thermal vacuum (TVAC) testing to verify performance in orbital environment',
-      'Electromagnetic compatibility (EMC) testing — no interference with own systems',
-      'End-to-end flight software validation against all mission requirements',
-      'Anomaly resolution, pre-ship review, and formal launch readiness declaration',
-    ],
-    deliverables: [
-      'Environmental Test Report — vibration, TVAC, and EMC results',
-      'Flight software verification and validation report',
-      'Anomaly Log with full closure documentation for each finding',
-      'Pre-Ship Review (PSR) board minutes and signed go/no-go decision record',
-    ],
-    team: [
-      'Test Engineer — environmental test planning, execution, and reporting',
-      'Flight Software Engineer — software validation and anomaly root cause',
-      'Quality Assurance Engineer — independent test witnessing and sign-off',
-      'Review Board — independent authority for the go/no-go decision',
-    ],
-    successCriteria: [
-      'All environmental tests passed — zero open critical anomalies',
-      'Flight software verified against 100% of functional requirements',
-      'Pre-Ship Review board formally records "Go" — no waivers on critical items',
-      'Mass, power, and interface data verified against launch provider requirements',
-    ],
-    criticalDecision:
-      'Go / No-go for launch readiness — based on objective test data only, not schedule pressure. This decision cannot be compressed or waived. If the satellite is not ready, it does not ship.',
-    leadershipQuestions: [
-      'Is contingency budget reserved for anomalies found during testing?',
-      'Who holds final go/no-go authority, and is this documented in advance?',
-      'What is the decision criteria if a non-critical anomaly is open at PSR?',
-    ],
-    riskIfDelayed:
-      'Skipping or rushing environmental testing is the single biggest cause of on-orbit satellite failure in the small satellite industry. A satellite that fails in orbit cannot be recovered, repaired, or replaced. The cost of a failed mission vastly exceeds the cost of thorough testing.',
-  },
-  {
-    id: 5,
-    name: 'Launch & Early Operations',
-    duration: 'Months 23–26',
-    shortDesc: 'Deliver, launch, and make first contact.',
-    milestones: [
-      {
-        period: 'Month 23',
-        label: 'Launch Site Delivery',
-        detail: 'Satellite shipped and received at launch provider facility; inspection passed',
-      },
-      {
-        period: 'Months 24–25',
-        label: 'Launch Campaign',
-        detail: 'Final integration, countdown rehearsals, and range safety approvals',
-      },
-      {
-        period: 'Month 26',
-        label: 'Launch + Commissioning',
-        detail: 'Vehicle lift-off, first signal acquired, 30-day commissioning begins',
-      },
-    ],
-    whatHappens: [
-      'Satellite shipped and handed over to launch provider with inspection',
-      'Final launch vehicle integration checks and fit checks',
-      'Countdown rehearsals and range safety approval',
-      'Ground station fully verified operational before launch day',
-      'Launch day, first signal acquisition, initial on-orbit commissioning',
-    ],
-    deliverables: [
-      'Launch site delivery documentation and acceptance inspection report',
-      'Operational Procedures Manual — command and telemetry reference',
-      'First Contact Confirmation Report — signal acquisition record',
-      '30-Day Commissioning Report — satellite declared mission-ready',
-    ],
-    team: [
-      'Launch Campaign Engineer — on-site integration and countdown support',
-      'Ground Station Operator — real-time telemetry and command during LEOP',
-      'Flight Dynamics Engineer — orbit determination and contact scheduling',
-      'Mission Operations Manager — overall launch execution authority',
-    ],
-    successCriteria: [
-      'Satellite delivered to launch site on schedule with no damage or anomaly',
-      'Ground station verified fully operational at least 7 days before launch',
-      'First signal acquired within the first planned contact window',
-      'All commissioning checks passed — satellite declared mission-ready',
-    ],
-    criticalDecision:
-      'Is the ground station ready and independently verified before launch day? There is no launch without confirmed ground contact capability. This verification must happen no later than 7 days before launch.',
-    leadershipQuestions: [
-      'Who is the designated operations team and is their training complete?',
-      'What is the long-term operations and data distribution plan post-commissioning?',
-      'Is there a contingency plan if the launch window is missed?',
-    ],
-    riskIfDelayed:
-      'Launch windows are fixed by orbital mechanics and the launch provider manifest. Missing a window means a 6–12 month wait for the next available slot — with associated costs for storage, re-testing, and re-certification of the satellite.',
-  },
+/* ─── Static metadata (positions, colors, icons — same for all languages) ───── */
+const PHASE_BAR_META = [
+  { start: 0, end: 2,  color: '#3B82F6' },
+  { start: 1, end: 3,  color: '#8B5CF6' },
+  { start: 3, end: 5,  color: '#06B6D4' },
+  { start: 5, end: 7,  color: '#10B981' },
+  { start: 7, end: 9,  color: '#F59E0B' },
+  { start: 9, end: 11, color: '#EF4444' },
+  { start: 11, end: 12, color: '#ffffff' },
 ];
+const PHASE_COLORS   = ['#3B82F6','#8B5CF6','#06B6D4','#10B981','#F59E0B','#EF4444','#ffffff'];
+const PARALLEL_META  = [
+  { start: 0, end: 3,  color: '#3B82F6' },
+  { start: 0, end: 4,  color: '#8B5CF6' },
+  { start: 1, end: 5,  color: '#06B6D4' },
+  { start: 2, end: 9,  color: '#10B981' },
+  { start: 1, end: 11, color: '#F59E0B' },
+];
+const MARGIN_ICONS   = [Zap, Shield, Rocket, TrendingUp];
+const MARGIN_COLORS  = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
+const VALID_ICONS    = [FileText, Calendar, Rocket, Search, Users];
+const Q_COLORS       = ['#3B82F6','#8B5CF6','#06B6D4','#F59E0B','#EF4444'];
+const DAY90_COLORS   = ['#3B82F6','#8B5CF6','#06B6D4','#10B981'];
+const QUARTERS       = ["Q1'26","Q2'26","Q3'26","Q4'26","Q1'27","Q2'27","Q3'27","Q4'27","Q1'28","Q2'28","Q3'28","Q4'28"];
 
-/* ─── Constants ─────────────────────────────────────────────────────────────── */
-
-const BLUE = '#3B82F6';
-const BLUE_BORDER = 'rgba(59,130,246,0.25)';
-
-/* ─── Stars ─────────────────────────────────────────────────────────────────── */
-
+/* ─── Stars ───────────────────────────────────────────────────────────────────── */
 function Stars() {
-  const stars = useMemo(
-    () =>
-      Array.from({ length: 180 }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: Math.random() * 1.6 + 0.4,
-        opacity: Math.random() * 0.55 + 0.08,
-      })),
-    []
-  );
-
+  const stars = useMemo(() =>
+    Array.from({ length: 120 }, (_, i) => ({
+      id: i, x: Math.random() * 100, y: Math.random() * 100,
+      size: Math.random() * 1.4 + 0.4, opacity: Math.random() * 0.35 + 0.08,
+    })), []);
   return (
-    <div className="stars-layer fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
       {stars.map((s) => (
-        <div
-          key={s.id}
-          className="absolute rounded-full bg-white"
-          style={{
-            left: `${s.x}%`,
-            top: `${s.y}%`,
-            width: `${s.size}px`,
-            height: `${s.size}px`,
-            opacity: s.opacity,
-          }}
-        />
+        <div key={s.id} className="absolute rounded-full bg-white"
+          style={{ left:`${s.x}%`, top:`${s.y}%`, width:`${s.size}px`, height:`${s.size}px`, opacity:s.opacity }} />
       ))}
     </div>
   );
 }
 
-/* ─── Milestone Strip ───────────────────────────────────────────────────────── */
-
-function MilestoneStrip({ milestones }) {
+/* ─── Layout helpers ─────────────────────────────────────────────────────────── */
+function Section({ id, children }) {
   return (
-    <div className="relative mb-8">
-      {/* Connecting line */}
-      <div
-        className="absolute hidden sm:block"
-        style={{
-          top: 11,
-          left: '10%',
-          right: '10%',
-          height: '1px',
-          background: 'linear-gradient(90deg, #3B82F6, #60a5fa)',
-          boxShadow: '0 0 8px rgba(59,130,246,0.7)',
-        }}
-      />
+    <motion.section id={id}
+      initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.6 }}
+      className="mb-20">
+      {children}
+    </motion.section>
+  );
+}
+function SectionLabel({ text }) {
+  return <p className="text-[10px] font-black uppercase tracking-[0.22em] mb-2" style={{ color:'rgba(96,165,250,0.6)' }}>{text}</p>;
+}
+function SectionTitle({ children }) {
+  return <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 tracking-[-0.02em]" style={{ fontFamily:"'Space Grotesk',sans-serif" }}>{children}</h2>;
+}
+function Divider() {
+  return <div className="mb-8 mt-4 h-px" style={{ background:'linear-gradient(90deg,rgba(59,130,246,0.45) 0%,transparent 70%)' }} />;
+}
 
-      <div className="flex flex-col sm:flex-row gap-6 sm:gap-0">
-        {milestones.map((m, i) => (
-          <div
-            key={i}
-            className="flex-1 flex flex-col items-center text-center px-4"
-          >
-            {/* Node */}
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center mb-3 z-10 flex-shrink-0"
-              style={{
-                background: BLUE,
-                border: '2px solid rgba(147,197,253,0.65)',
-                boxShadow: '0 0 14px rgba(59,130,246,0.9), 0 0 28px rgba(59,130,246,0.35)',
-              }}
-            >
-              <span className="text-[9px] font-black text-white">{i + 1}</span>
-            </div>
-            <p
-              className="text-[9px] font-black uppercase tracking-[0.18em] mb-1"
-              style={{ color: 'rgba(96,165,250,0.7)' }}
-            >
-              {m.period}
-            </p>
-            <p className="text-[13px] font-semibold text-white mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              {m.label}
-            </p>
-            <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(148,163,184,0.65)' }}>
-              {m.detail}
-            </p>
-          </div>
-        ))}
-      </div>
+/* ─── Gantt bar ───────────────────────────────────────────────────────────────── */
+function GanttBar({ start, end, color }) {
+  return (
+    <div className="flex h-6" style={{ width:'100%' }}>
+      {Array.from({ length: 12 }, (_, col) => {
+        const filled = col >= start && col < end;
+        const isFirst = col === start, isLast = col === end - 1;
+        const c = color === '#ffffff' ? 'rgba(255,255,255,0.7)' : color;
+        return (
+          <div key={col} style={{
+            flex: 1,
+            background: filled ? (color==='#ffffff' ? 'rgba(255,255,255,0.1)' : `${color}28`) : 'transparent',
+            borderRadius: isFirst&&isLast ? 4 : isFirst ? '4px 0 0 4px' : isLast ? '0 4px 4px 0' : 0,
+            borderTop:    filled ? `2px solid ${c}` : 'none',
+            borderBottom: filled ? `2px solid ${c}` : 'none',
+            borderLeft:   isFirst&&filled ? `2px solid ${c}` : 'none',
+            borderRight:  isLast&&filled  ? `2px solid ${c}` : 'none',
+          }} />
+        );
+      })}
     </div>
   );
 }
 
-/* ─── Info Card ─────────────────────────────────────────────────────────────── */
-
-function InfoCard({ icon: Icon, title, content, accent }) {
-  return (
-    <div
-      className="flex flex-col gap-3 rounded-xl p-5 h-full"
-      style={{
-        background: 'rgba(5, 11, 22, 0.9)',
-        border: '1px solid rgba(59,130,246,0.1)',
-      }}
-    >
-      <div className="flex items-center gap-2.5">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ background: `${accent}18` }}
-        >
-          <Icon size={15} style={{ color: accent }} />
-        </div>
-        <h4
-          className="text-[10px] font-black uppercase tracking-[0.16em]"
-          style={{ color: 'rgba(255,255,255,0.45)' }}
-        >
-          {title}
-        </h4>
-      </div>
-
-      {Array.isArray(content) ? (
-        <ul className="space-y-2 pl-1">
-          {content.map((item, i) => (
-            <li key={i} className="flex items-start gap-2.5 text-[13px] text-slate-300 leading-relaxed">
-              <span
-                className="mt-[7px] w-1 h-1 rounded-full flex-shrink-0"
-                style={{ background: accent }}
-              />
-              {item}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-[13px] text-slate-300 leading-relaxed pl-1">{content}</p>
-      )}
-    </div>
-  );
-}
-
-/* ─── Risk Banner ───────────────────────────────────────────────────────────── */
-
-function RiskBanner({ content }) {
-  return (
-    <div
-      className="rounded-xl p-5 flex gap-4 items-start"
-      style={{
-        background: 'rgba(239,68,68,0.06)',
-        border: '1px solid rgba(239,68,68,0.22)',
-      }}
-    >
-      <div
-        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-        style={{ background: 'rgba(239,68,68,0.12)' }}
-      >
-        <AlertOctagon size={17} style={{ color: '#EF4444' }} />
-      </div>
-      <div>
-        <h4
-          className="text-[10px] font-black uppercase tracking-[0.16em] mb-2"
-          style={{ color: 'rgba(239,68,68,0.75)' }}
-        >
-          Risk if Delayed
-        </h4>
-        <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(252,165,165,0.85)' }}>
-          {content}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Phase Modal ───────────────────────────────────────────────────────────── */
-
-function PhaseModal({ phase, onClose }) {
-  // Escape key + scroll lock
-  useEffect(() => {
-    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handleKey);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', handleKey);
-      document.body.style.overflow = '';
-    };
-  }, [onClose]);
+/* ─── Header ─────────────────────────────────────────────────────────────────── */
+function Header({ lang, setLang }) {
+  const t = T[lang].header;
+  const tn = T[lang].nav;
+  const LANGS = ['en', 'uz', 'ru'];
 
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-start justify-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.22 }}
-    >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 cursor-pointer"
-        style={{ background: 'rgba(2,6,15,0.88)', backdropFilter: 'blur(10px)' }}
-        onClick={onClose}
-      />
-
-      {/* Scrollable container */}
-      <div className="relative z-10 w-full h-full overflow-y-auto py-8 px-4">
-        <motion.div
-          className="max-w-5xl mx-auto rounded-2xl overflow-hidden"
-          style={{
-            background: 'linear-gradient(160deg, rgba(9,18,38,0.98) 0%, rgba(5,11,22,0.98) 100%)',
-            border: '1px solid rgba(59,130,246,0.3)',
-            boxShadow: '0 0 0 1px rgba(59,130,246,0.08), 0 40px 80px rgba(0,0,0,0.6)',
-          }}
-          initial={{ opacity: 0, y: 32, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.98 }}
-          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Modal Header */}
-          <div
-            className="flex items-start justify-between p-6 pb-5"
-            style={{ borderBottom: '1px solid rgba(59,130,246,0.12)' }}
-          >
-            <div className="flex items-start gap-4">
-              {/* Phase number accent */}
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: 'rgba(59,130,246,0.1)',
-                  border: '1px solid rgba(59,130,246,0.3)',
-                  boxShadow: '0 0 20px rgba(59,130,246,0.2)',
-                }}
-              >
-                <span
-                  className="text-xl font-black"
-                  style={{ color: '#60a5fa', fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  {phase.id}
-                </span>
-              </div>
-              <div>
-                <p
-                  className="text-[10px] font-black uppercase tracking-[0.2em] mb-1"
-                  style={{ color: 'rgba(96,165,250,0.6)' }}
-                >
-                  Phase {phase.id} &nbsp;·&nbsp; {phase.duration}
-                </p>
-                <h2
-                  className="text-2xl font-bold text-white tracking-[-0.02em]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  {phase.name}
-                </h2>
-                <p className="text-[13px] mt-1" style={{ color: 'rgba(148,163,184,0.65)' }}>
-                  {phase.shortDesc}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={onClose}
-              className="flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 transition-all duration-150"
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
-                e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
-              }}
-            >
-              <X size={15} style={{ color: 'rgba(148,163,184,0.7)' }} />
-            </button>
-          </div>
-
-          {/* Modal Body */}
-          <div className="p-6 space-y-6">
-            {/* Milestone Strip */}
-            <div>
-              <p
-                className="text-[10px] font-black uppercase tracking-[0.2em] mb-4"
-                style={{ color: 'rgba(96,165,250,0.5)' }}
-              >
-                Month-by-Month Breakdown
-              </p>
-              <div
-                className="rounded-xl p-5"
-                style={{
-                  background: 'rgba(59,130,246,0.04)',
-                  border: '1px solid rgba(59,130,246,0.12)',
-                }}
-              >
-                <MilestoneStrip milestones={phase.milestones} />
-              </div>
-            </div>
-
-            {/* Row 1: What Happens + Deliverables */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoCard
-                icon={Activity}
-                title="What Happens"
-                content={phase.whatHappens}
-                accent="#3B82F6"
-              />
-              <InfoCard
-                icon={Package}
-                title="Key Deliverables"
-                content={phase.deliverables}
-                accent="#8B5CF6"
-              />
-            </div>
-
-            {/* Row 2: Team + Success Criteria */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoCard
-                icon={Users}
-                title="Team & Resources"
-                content={phase.team}
-                accent="#06B6D4"
-              />
-              <InfoCard
-                icon={CheckCircle}
-                title="Success Criteria"
-                content={phase.successCriteria}
-                accent="#10B981"
-              />
-            </div>
-
-            {/* Row 3: Critical Decision + Leadership Questions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoCard
-                icon={Crosshair}
-                title="Critical Decision"
-                content={phase.criticalDecision}
-                accent="#F59E0B"
-              />
-              <InfoCard
-                icon={MessageSquare}
-                title="What We Ask Leadership"
-                content={phase.leadershipQuestions}
-                accent="#10B981"
-              />
-            </div>
-
-            {/* Full-width Risk Banner */}
-            <RiskBanner content={phase.riskIfDelayed} />
-          </div>
-        </motion.div>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ─── Phase Card ────────────────────────────────────────────────────────────── */
-
-function PhaseCard({ phase, index, onClick }) {
-  return (
-    <motion.div
-      className="flex-1 min-w-0"
-      initial={{ opacity: 0, y: 36 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.55 + index * 0.13, duration: 0.56, ease: 'easeOut' }}
-    >
-      <motion.button
-        onClick={onClick}
-        whileHover={{ y: -5 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="w-full text-left relative overflow-hidden rounded-xl cursor-pointer group"
-        style={{
-          background: 'linear-gradient(145deg, rgba(10,20,40,0.82) 0%, rgba(7,13,26,0.82) 100%)',
-          border: `1px solid ${BLUE_BORDER}`,
-          backdropFilter: 'blur(10px)',
-          padding: '20px',
-          transition: 'border-color 0.25s, box-shadow 0.25s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(59,130,246,0.55)';
-          e.currentTarget.style.boxShadow = '0 0 28px rgba(59,130,246,0.14)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = BLUE_BORDER;
-          e.currentTarget.style.boxShadow = 'none';
-        }}
-      >
-        {/* Watermark number */}
-        <span
-          className="absolute bottom-0 right-1 font-black leading-none select-none pointer-events-none"
-          style={{
-            fontSize: '5.5rem',
-            color: 'rgba(59,130,246,0.06)',
-            lineHeight: 1,
-            fontFamily: "'Space Grotesk', sans-serif",
-          }}
-        >
-          {phase.id}
-        </span>
-
-        <div className="relative z-10">
-          {/* Badge + duration */}
-          <div className="flex items-center justify-between mb-3">
-            <span
-              className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-[0.12em]"
-              style={{
-                color: '#93c5fd',
-                background: 'rgba(59,130,246,0.1)',
-                border: '1px solid rgba(59,130,246,0.22)',
-              }}
-            >
-              Phase {phase.id}
-            </span>
-            <span className="text-[11px] font-medium" style={{ color: 'rgba(100,116,139,0.9)' }}>
-              {phase.duration}
-            </span>
-          </div>
-
-          <h3
-            className="font-semibold text-[14px] text-white leading-snug mb-2"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            {phase.name}
-          </h3>
-
-          <p className="text-[12px] leading-relaxed" style={{ color: 'rgba(148,163,184,0.7)' }}>
-            {phase.shortDesc}
-          </p>
-
-          {/* CTA */}
-          <div className="mt-4 flex items-center gap-1.5">
-            <span
-              className="text-[11px] font-semibold tracking-wide transition-colors duration-200"
-              style={{ color: 'rgba(96,165,250,0.55)' }}
-            >
-              Open details
-            </span>
-            <ArrowUpRight
-              size={11}
-              style={{ color: 'rgba(96,165,250,0.55)' }}
-              className="transition-colors duration-200"
-            />
-          </div>
-        </div>
-      </motion.button>
-    </motion.div>
-  );
-}
-
-/* ─── Timeline Progress Track ───────────────────────────────────────────────── */
-
-function TimelineTrack() {
-  return (
-    <div className="relative h-7 mb-4 hidden md:block" style={{ overflow: 'visible' }}>
-      <div
-        className="absolute top-1/2 inset-x-0"
-        style={{ height: '1px', transform: 'translateY(-50%)', background: 'rgba(59,130,246,0.12)' }}
-      />
-      <motion.div
-        className="absolute top-1/2 left-0 rounded-full"
-        style={{
-          height: '1px',
-          transform: 'translateY(-50%)',
-          background: 'linear-gradient(90deg, #1d4ed8 0%, #3B82F6 55%, #93c5fd 100%)',
-          boxShadow: '0 0 8px rgba(59,130,246,0.9), 0 0 20px rgba(59,130,246,0.35)',
-        }}
-        initial={{ width: '0%' }}
-        animate={{ width: '100%' }}
-        transition={{ duration: 1.7, delay: 0.75, ease: [0.4, 0, 0.2, 1] }}
-      />
-      {PHASES.map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            width: 10,
-            height: 10,
-            top: '50%',
-            left: `${(i / (PHASES.length - 1)) * 100}%`,
-            transform: 'translate(-50%, -50%)',
-            background: BLUE,
-            border: '2px solid rgba(147,197,253,0.55)',
-            boxShadow: '0 0 10px rgba(59,130,246,0.95), 0 0 22px rgba(59,130,246,0.4)',
-          }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1.0 + i * 0.14, duration: 0.35, ease: 'backOut' }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ─── Header ────────────────────────────────────────────────────────────────── */
-
-function Header() {
-  return (
-    <motion.header
-      initial={{ opacity: 0, y: -24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.72, ease: 'easeOut' }}
-      className="mb-12"
-    >
-      <div className="flex items-center justify-between mb-10">
+    <motion.header initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7 }} className="mb-16">
+      <div className="flex items-center justify-between mb-12 flex-wrap gap-3">
+        {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.28)' }}
-          >
-            <Satellite size={17} style={{ color: '#60a5fa' }} />
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+            style={{ background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.28)' }}>
+            <Satellite size={17} style={{ color:'#60a5fa' }} />
           </div>
-          <span
-            className="text-[20px] font-bold text-white tracking-[-0.01em]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            UzCosmos
-          </span>
+          <span className="text-[20px] font-bold text-white tracking-[-0.01em]"
+            style={{ fontFamily:"'Space Grotesk',sans-serif" }}>UzCosmos</span>
         </div>
 
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-2 text-[13px] font-medium px-4 py-2 rounded-lg transition-all duration-200"
-          style={{
-            color: '#60a5fa',
-            border: '1px solid rgba(59,130,246,0.28)',
-            background: 'rgba(59,130,246,0.06)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(59,130,246,0.14)';
-            e.currentTarget.style.borderColor = 'rgba(59,130,246,0.55)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(59,130,246,0.06)';
-            e.currentTarget.style.borderColor = 'rgba(59,130,246,0.28)';
-          }}
-        >
-          <Download size={13} />
-          Download PDF
-        </button>
+        {/* Right controls */}
+        <div className="flex items-center gap-3">
+          {/* Language switcher */}
+          <div className="flex items-center gap-1 rounded-lg p-1"
+            style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)' }}>
+            {LANGS.map((l) => (
+              <button key={l} onClick={() => setLang(l)}
+                className="px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-wider transition-all duration-200"
+                style={{
+                  background: lang===l ? 'rgba(59,130,246,0.2)' : 'transparent',
+                  color: lang===l ? '#60a5fa' : 'rgba(148,163,184,0.55)',
+                  border: lang===l ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
+                }}>
+                {l}
+              </button>
+            ))}
+          </div>
+          {/* Download */}
+          <button onClick={() => window.print()}
+            className="flex items-center gap-2 text-[13px] font-medium px-4 py-2 rounded-lg transition-all duration-200"
+            style={{ color:'#60a5fa', border:'1px solid rgba(59,130,246,0.28)', background:'rgba(59,130,246,0.06)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background='rgba(59,130,246,0.14)'; e.currentTarget.style.borderColor='rgba(59,130,246,0.55)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background='rgba(59,130,246,0.06)'; e.currentTarget.style.borderColor='rgba(59,130,246,0.28)'; }}>
+            <Download size={13} /> {tn.download}
+          </button>
+        </div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.18, duration: 0.68 }}
-        className="text-center mb-9"
-      >
-        <p
-          className="text-[10px] font-bold uppercase tracking-[0.22em] mb-4"
-          style={{ color: 'rgba(96,165,250,0.55)' }}
-        >
-          Government Proposal &nbsp;·&nbsp; Confidential
-        </p>
-        <h1
-          className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-[-0.025em]"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          3U CubeSat Mission Roadmap
-        </h1>
-        <p className="text-[15px] tracking-wide font-light" style={{ color: 'rgba(147,197,253,0.65)' }}>
-          From Concept to Orbit &nbsp;—&nbsp; 2026 to 2028
-        </p>
-      </motion.div>
+      {/* Title block */}
+      <div className="text-center max-w-3xl mx-auto">
+        <p className="text-[10px] font-bold uppercase tracking-[0.22em] mb-5"
+          style={{ color:'rgba(96,165,250,0.55)' }}>{t.label}</p>
+        <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-[-0.025em]"
+          style={{ fontFamily:"'Space Grotesk',sans-serif" }}>{t.title}</h1>
+        <p className="text-lg font-medium mb-2" style={{ color:'rgba(147,197,253,0.8)' }}>{t.subtitle}</p>
+        <p className="text-[14px]" style={{ color:'rgba(148,163,184,0.6)' }}>{t.byline}</p>
+      </div>
 
-      <motion.div
-        style={{
-          height: '1px',
-          background:
-            'linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.7) 25%, rgba(147,197,253,1) 50%, rgba(59,130,246,0.7) 75%, transparent 100%)',
-          boxShadow: '0 0 14px rgba(59,130,246,0.55), 0 0 35px rgba(59,130,246,0.18)',
-        }}
-        initial={{ scaleX: 0, opacity: 0 }}
-        animate={{ scaleX: 1, opacity: 1 }}
-        transition={{ delay: 0.48, duration: 0.85, ease: 'easeInOut' }}
-      />
+      <motion.div className="mt-10 h-px"
+        style={{ background:'linear-gradient(90deg,transparent,rgba(59,130,246,0.8),rgba(147,197,253,1),rgba(59,130,246,0.8),transparent)', boxShadow:'0 0 14px rgba(59,130,246,0.5)' }}
+        initial={{ scaleX:0 }} animate={{ scaleX:1 }} transition={{ delay:0.5, duration:0.9 }} />
     </motion.header>
   );
 }
 
-/* ─── Footer ────────────────────────────────────────────────────────────────── */
+/* ─── Core Principles ────────────────────────────────────────────────────────── */
+const PRINCIPLE_ICONS = [Target, Zap, CheckCircle];
 
-function Footer() {
+function CorePrinciples() {
+  const lang = useLang();
+  const tp = T[lang].principles;
   return (
-    <motion.footer
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 2.0, duration: 0.9 }}
-      className="mt-20 pt-6 pb-10 text-center"
-      style={{ borderTop: '1px solid rgba(59,130,246,0.09)' }}
-    >
-      <p className="text-[13px]" style={{ color: 'rgba(148,163,184,0.55)' }}>
-        Prepared by{' '}
-        <span style={{ color: 'rgba(203,213,225,0.85)' }}>Abdulmumin Abdusattorov</span>
-        {' '}— Lead Engineer Candidate
+    <Section id="principles">
+      <SectionLabel text={tp.sectionLabel} />
+      <SectionTitle>{tp.title}</SectionTitle>
+      <p className="text-[14px] mb-2 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{tp.body}</p>
+      <Divider />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {tp.items.map((text, i) => {
+          const Icon = PRINCIPLE_ICONS[i];
+          return (
+            <motion.div key={i}
+              initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
+              viewport={{ once:true }} transition={{ delay:i*0.1 }}
+              className="rounded-xl p-5 flex items-start gap-4"
+              style={{ background:'rgba(59,130,246,0.05)', border:'1px solid rgba(59,130,246,0.18)' }}>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                style={{ background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)' }}>
+                <Icon size={16} style={{ color:'#60a5fa' }} />
+              </div>
+              <p className="text-[14px] text-white leading-relaxed font-medium">{text}</p>
+            </motion.div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
+/* ─── Five Questions ─────────────────────────────────────────────────────────── */
+function FiveQuestions() {
+  const lang = useLang();
+  const tq = T[lang].questions;
+  return (
+    <Section id="questions">
+      <SectionLabel text={tq.sectionLabel} />
+      <SectionTitle>{tq.title}</SectionTitle>
+      <p className="text-[14px] mb-2 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{tq.body}</p>
+      <Divider />
+      <div className="space-y-3">
+        {tq.items.map(({ q, a, tag }, i) => (
+          <motion.div key={i}
+            initial={{ opacity:0, x:-16 }} whileInView={{ opacity:1, x:0 }}
+            viewport={{ once:true }} transition={{ delay:i*0.08 }}
+            className="rounded-xl p-5 flex gap-5 items-start"
+            style={{ background:'rgba(5,11,22,0.8)', border:'1px solid rgba(255,255,255,0.06)' }}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black text-[14px]"
+              style={{ background:`${Q_COLORS[i]}18`, border:`1px solid ${Q_COLORS[i]}40`, color:Q_COLORS[i] }}>
+              {i+1}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <p className="text-[14px] font-semibold text-white">{q}</p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{ background:`${Q_COLORS[i]}18`, border:`1px solid ${Q_COLORS[i]}30`, color:Q_COLORS[i] }}>{tag}</span>
+              </div>
+              <p className="text-[13px] leading-relaxed" style={{ color:'rgba(148,163,184,0.75)' }}>{a}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+/* ─── Master Timeline ────────────────────────────────────────────────────────── */
+function MasterTimeline() {
+  const lang = useLang();
+  const tt = T[lang].timeline;
+  return (
+    <Section id="timeline">
+      <SectionLabel text={tt.sectionLabel} />
+      <SectionTitle>{tt.title}</SectionTitle>
+      <p className="text-[14px] mb-2 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{tt.body}</p>
+      <Divider />
+
+      {/* Gantt */}
+      <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color:'rgba(96,165,250,0.45)' }}>{tt.ganttLabel}</p>
+      <div className="overflow-x-auto rounded-xl p-4 mb-6"
+        style={{ background:'rgba(5,11,22,0.8)', border:'1px solid rgba(59,130,246,0.12)' }}>
+        <div style={{ minWidth:680 }}>
+          <div className="flex mb-2 pl-[180px]">
+            {QUARTERS.map((q, i) => (
+              <div key={i} className="flex-1 text-center text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: i===11 ? 'rgba(255,255,255,0.85)' : 'rgba(96,165,250,0.5)' }}>{q}</div>
+            ))}
+          </div>
+          <div className="space-y-1.5">
+            {PHASE_BAR_META.map((p, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="text-[11px] font-semibold flex-shrink-0 text-right"
+                  style={{ width:168, color: p.color==='#ffffff' ? 'rgba(255,255,255,0.85)' : p.color }}>
+                  {tt.phaseNames[i]}
+                </div>
+                <div className="flex-1"><GanttBar start={p.start} end={p.end} color={p.color} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color:'rgba(96,165,250,0.45)' }}>{tt.tableLabel}</p>
+      <div className="overflow-x-auto rounded-xl" style={{ border:'1px solid rgba(59,130,246,0.15)' }}>
+        <table className="w-full text-[13px]" style={{ minWidth:560 }}>
+          <thead>
+            <tr style={{ background:'rgba(59,130,246,0.08)', borderBottom:'1px solid rgba(59,130,246,0.15)' }}>
+              {tt.tableHeaders.map((h) => (
+                <th key={h} className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-[0.14em]"
+                  style={{ color:'rgba(96,165,250,0.65)' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {tt.rows.map((row, i) => (
+              <tr key={i} style={{ background: i%2===0 ? 'rgba(5,11,22,0.5)' : 'transparent', borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
+                <td className="px-4 py-3 font-semibold" style={{ color:PHASE_COLORS[i] }}>{row.timeframe}</td>
+                <td className="px-4 py-3 font-semibold text-white">{row.phase}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-1 rounded-full text-[11px] font-bold"
+                    style={{ background:`${PHASE_COLORS[i]}15`, color:PHASE_COLORS[i], border:`1px solid ${PHASE_COLORS[i]}30` }}>
+                    {row.duration}
+                  </span>
+                </td>
+                <td className="px-4 py-3" style={{ color:'rgba(148,163,184,0.8)' }}>{row.deliverable}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Section>
+  );
+}
+
+/* ─── Parallel Tracks ────────────────────────────────────────────────────────── */
+function ParallelTracks() {
+  const lang = useLang();
+  const tp = T[lang].parallel;
+  return (
+    <Section id="parallel">
+      <SectionLabel text={tp.sectionLabel} />
+      <SectionTitle>{tp.title}</SectionTitle>
+      <p className="text-[14px] mb-2 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{tp.body}</p>
+      <Divider />
+
+      <div className="overflow-x-auto rounded-xl p-4 mb-4"
+        style={{ background:'rgba(5,11,22,0.8)', border:'1px solid rgba(59,130,246,0.12)' }}>
+        <div style={{ minWidth:680 }}>
+          <div className="flex mb-2 pl-[200px]">
+            {QUARTERS.map((q, i) => (
+              <div key={i} className="flex-1 text-center text-[10px] font-bold uppercase tracking-wider"
+                style={{ color:'rgba(96,165,250,0.5)' }}>{q}</div>
+            ))}
+          </div>
+          <div className="space-y-1.5">
+            {PARALLEL_META.map((p, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="text-[11px] font-semibold flex-shrink-0 text-right"
+                  style={{ width:188, color:p.color }}>{tp.items[i].name}</div>
+                <div className="flex-1"><GanttBar start={p.start} end={p.end} color={p.color} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {PARALLEL_META.map((p, i) => (
+          <div key={i} className="rounded-lg p-3 flex gap-2.5"
+            style={{ background:`${p.color}08`, border:`1px solid ${p.color}20` }}>
+            <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background:p.color }} />
+            <p className="text-[12px] leading-relaxed" style={{ color:'rgba(148,163,184,0.8)' }}>
+              <span className="font-semibold" style={{ color:p.color }}>{tp.items[i].name}: </span>{tp.items[i].note}
+            </p>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+/* ─── Schedule Margin ────────────────────────────────────────────────────────── */
+function ScheduleMargin() {
+  const lang = useLang();
+  const tm = T[lang].margin;
+  return (
+    <Section id="margin">
+      <SectionLabel text={tm.sectionLabel} />
+      <SectionTitle>{tm.title}</SectionTitle>
+      <p className="text-[14px] mb-2 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{tm.body}</p>
+      <Divider />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {tm.items.map(({ rule, detail }, i) => {
+          const Icon = MARGIN_ICONS[i];
+          const color = MARGIN_COLORS[i];
+          return (
+            <motion.div key={i}
+              initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }}
+              viewport={{ once:true }} transition={{ delay:i*0.1 }}
+              className="rounded-xl p-5 flex gap-4"
+              style={{ background:'rgba(5,11,22,0.8)', border:`1px solid ${color}20` }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background:`${color}12`, border:`1px solid ${color}30` }}>
+                <Icon size={18} style={{ color }} />
+              </div>
+              <div>
+                <p className="font-bold text-white text-[14px] mb-1">{rule}</p>
+                <p className="text-[12px] leading-relaxed" style={{ color:'rgba(148,163,184,0.75)' }}>{detail}</p>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
+/* ─── Validation ─────────────────────────────────────────────────────────────── */
+function Validation() {
+  const lang = useLang();
+  const tv = T[lang].validation;
+  return (
+    <Section id="validation">
+      <SectionLabel text={tv.sectionLabel} />
+      <SectionTitle>{tv.title}</SectionTitle>
+      <p className="text-[14px] mb-2 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{tv.body}</p>
+      <Divider />
+      <div className="space-y-3">
+        {tv.items.map(({ label, detail }, i) => {
+          const Icon = VALID_ICONS[i];
+          return (
+            <motion.div key={i}
+              initial={{ opacity:0, x:-16 }} whileInView={{ opacity:1, x:0 }}
+              viewport={{ once:true }} transition={{ delay:i*0.08 }}
+              className="flex gap-4 rounded-xl p-4"
+              style={{ background:'rgba(5,11,22,0.8)', border:'1px solid rgba(255,255,255,0.06)' }}>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.2)' }}>
+                <Icon size={15} style={{ color:'#60a5fa' }} />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-white mb-0.5">{label}</p>
+                <p className="text-[12px] leading-relaxed" style={{ color:'rgba(148,163,184,0.75)' }}>{detail}</p>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
+/* ─── 90 Days ─────────────────────────────────────────────────────────────────── */
+function NinetyDays() {
+  const lang = useLang();
+  const tn = T[lang].ninetyDays;
+  const [active, setActive] = useState(0);
+  const phase = tn.phases[active];
+  const color = DAY90_COLORS[active];
+
+  return (
+    <Section id="90days">
+      <SectionLabel text={tn.sectionLabel} />
+      <SectionTitle>{tn.title}</SectionTitle>
+      <p className="text-[14px] mb-2 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{tn.body}</p>
+      <Divider />
+
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {tn.phases.map((p, i) => (
+          <button key={i} onClick={() => setActive(i)}
+            className="px-4 py-2 rounded-lg text-[12px] font-bold transition-all duration-200"
+            style={{
+              background: active===i ? `${DAY90_COLORS[i]}20` : 'transparent',
+              border: `1px solid ${active===i ? DAY90_COLORS[i] : 'rgba(255,255,255,0.1)'}`,
+              color: active===i ? DAY90_COLORS[i] : 'rgba(148,163,184,0.7)',
+            }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div key={`${lang}-${active}`}
+          initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-8 }}
+          transition={{ duration:0.25 }}>
+
+          {/* Phase header */}
+          <div className="rounded-xl p-5 mb-4"
+            style={{ background:`${color}08`, border:`1px solid ${color}25` }}>
+            <div className="flex flex-wrap gap-3 items-start justify-between mb-2">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color }}>{phase.label}</span>
+                <h3 className="text-[18px] font-bold text-white mt-1">{phase.title}</h3>
+              </div>
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full flex-shrink-0"
+                style={{ background:`${color}15`, border:`1px solid ${color}30`, color }}>
+                {tn.deliverableHeader} {phase.deadline}
+              </span>
+            </div>
+            <p className="text-[13px]" style={{ color:'rgba(148,163,184,0.8)' }}>
+              <strong style={{ color:'rgba(255,255,255,0.7)' }}>Goal: </strong>{phase.goal}
+            </p>
+          </div>
+
+          {/* Task/Deliverable table */}
+          <div className="overflow-x-auto rounded-xl mb-4" style={{ border:`1px solid ${color}15` }}>
+            <table className="w-full text-[13px]" style={{ minWidth:500 }}>
+              <thead>
+                <tr style={{ background:`${color}08`, borderBottom:`1px solid ${color}15` }}>
+                  <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-[0.14em] w-1/2" style={{ color }}>{tn.taskHeader}</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-black uppercase tracking-[0.14em] w-1/2" style={{ color }}>{tn.deliverableHeader} {phase.deadline}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {phase.tasks.map(([task, deliverable], i) => (
+                  <tr key={i} style={{ background: i%2===0 ? 'rgba(5,11,22,0.5)' : 'transparent', borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
+                    <td className="px-4 py-3 text-white">{task}</td>
+                    <td className="px-4 py-3" style={{ color:'rgba(148,163,184,0.8)' }}>{deliverable}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Success criteria */}
+          <div className="rounded-xl p-4" style={{ background:`${color}06`, border:`1px solid ${color}20` }}>
+            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color }}>{tn.successHeader}</p>
+            <p className="text-[13px] leading-relaxed" style={{ color:'rgba(148,163,184,0.85)' }}>{phase.successCriteria}</p>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </Section>
+  );
+}
+
+/* ─── Commitment ─────────────────────────────────────────────────────────────── */
+function Commitment() {
+  const lang = useLang();
+  const tc = T[lang].commitment;
+  return (
+    <Section id="commitment">
+      <SectionLabel text={tc.sectionLabel} />
+      <SectionTitle>{tc.title}</SectionTitle>
+      <Divider />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="rounded-xl p-6"
+          style={{ background:'rgba(59,130,246,0.05)', border:'1px solid rgba(59,130,246,0.2)' }}>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-4"
+            style={{ color:'rgba(96,165,250,0.6)' }}>{tc.promisesLabel}</p>
+          <div className="space-y-3">
+            {tc.promises.map((text, i) => (
+              <div key={i} className="flex gap-3 items-start">
+                <CheckCircle size={16} style={{ color: ['#3B82F6','#10B981','#F59E0B'][i], flexShrink:0, marginTop:2 }} />
+                <p className="text-[14px] font-semibold text-white leading-relaxed">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl p-6"
+          style={{ background:'rgba(239,68,68,0.04)', border:'1px solid rgba(239,68,68,0.15)' }}>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-4"
+            style={{ color:'rgba(239,68,68,0.6)' }}>{tc.notLabel}</p>
+          <div className="space-y-3">
+            {tc.notPromising.map((text, i) => (
+              <div key={i} className="flex gap-3 items-start">
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2"
+                  style={{ background:'rgba(239,68,68,0.6)' }} />
+                <p className="text-[13px] leading-relaxed" style={{ color:'rgba(148,163,184,0.8)' }}>{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────────────────── */
+function Footer() {
+  const lang = useLang();
+  const tf = T[lang].footer;
+  return (
+    <motion.footer initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.5 }}
+      className="mt-16 pt-6 pb-10 text-center"
+      style={{ borderTop:'1px solid rgba(59,130,246,0.09)' }}>
+      <p className="text-[13px]" style={{ color:'rgba(148,163,184,0.55)' }}>
+        {tf.line1}{' '}<span style={{ color:'rgba(203,213,225,0.85)' }}>{tf.name}</span>{' '}- {tf.role}
       </p>
-      <p className="text-[11px] mt-1.5" style={{ color: 'rgba(100,116,139,0.45)' }}>
-        UzCosmos CubeSat Program 2026–2028 &nbsp;·&nbsp; Confidential Government Proposal Document
-      </p>
+      <p className="text-[11px] mt-1.5" style={{ color:'rgba(100,116,139,0.45)' }}>{tf.line2}</p>
     </motion.footer>
   );
 }
 
-/* ─── App ───────────────────────────────────────────────────────────────────── */
-
+/* ─── App ─────────────────────────────────────────────────────────────────────── */
 export default function App() {
-  const [activePhase, setActivePhase] = useState(null);
-  const activePhaseData = activePhase !== null ? PHASES.find((p) => p.id === activePhase) : null;
-
+  const [lang, setLang] = useState('en');
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0B1120' }}>
-      <Stars />
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <Header />
-
-        <section>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.38, duration: 0.55 }}
-            className="mb-5"
-          >
-            <h2
-              className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1"
-              style={{ color: 'rgba(96,165,250,0.65)' }}
-            >
-              Mission Timeline
-            </h2>
-            <p className="text-[13px]" style={{ color: 'rgba(100,116,139,0.85)' }}>
-              Click any phase card to open its full briefing.
-            </p>
-          </motion.div>
-
-          <TimelineTrack />
-
-          <div className="flex flex-col md:flex-row gap-3">
-            {PHASES.map((phase, i) => (
-              <PhaseCard
-                key={phase.id}
-                phase={phase}
-                index={i}
-                onClick={() => setActivePhase(phase.id)}
-              />
-            ))}
-          </div>
-        </section>
-
-        <Footer />
+    <LangCtx.Provider value={lang}>
+      <div className="min-h-screen" style={{ backgroundColor:'#0B1120' }}>
+        <Stars />
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <Header lang={lang} setLang={setLang} />
+          <CorePrinciples />
+          <FiveQuestions />
+          <MasterTimeline />
+          <ParallelTracks />
+          <ScheduleMargin />
+          <Validation />
+          <NinetyDays />
+          <Commitment />
+          <Footer />
+        </div>
       </div>
-
-      {/* Modal */}
-      <AnimatePresence>
-        {activePhaseData && (
-          <PhaseModal
-            key={activePhaseData.id}
-            phase={activePhaseData}
-            onClose={() => setActivePhase(null)}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+    </LangCtx.Provider>
   );
 }
