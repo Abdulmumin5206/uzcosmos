@@ -29,6 +29,7 @@ const MARGIN_ICONS   = [Zap, Shield, Rocket, TrendingUp];
 const MARGIN_COLORS  = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
 const VALID_ICONS    = [FileText, Calendar, Rocket, Search, Users];
 const Q_COLORS       = ['#3B82F6','#8B5CF6','#06B6D4','#F59E0B','#EF4444'];
+const HQ_COLORS      = ['#F59E0B','#06B6D4','#EF4444'];
 const DAY90_COLORS   = ['#3B82F6','#8B5CF6','#06B6D4','#10B981'];
 const QUARTERS       = ["Q1'26","Q2'26","Q3'26","Q4'26","Q1'27","Q2'27","Q3'27","Q4'27","Q1'28","Q2'28","Q3'28","Q4'28"];
 
@@ -131,13 +132,13 @@ function Header({ lang, setLang }) {
             ))}
           </div>
           {/* Download */}
-          <button onClick={() => window.print()}
+          <a href="/CubeSat_Timeline.pdf" download="CubeSat_Timeline.pdf"
             className="flex items-center gap-2 text-[13px] font-medium px-4 py-2 rounded-lg transition-all duration-200"
-            style={{ color:'#60a5fa', border:'1px solid rgba(59,130,246,0.28)', background:'rgba(59,130,246,0.06)' }}
+            style={{ color:'#60a5fa', border:'1px solid rgba(59,130,246,0.28)', background:'rgba(59,130,246,0.06)', textDecoration:'none' }}
             onMouseEnter={(e) => { e.currentTarget.style.background='rgba(59,130,246,0.14)'; e.currentTarget.style.borderColor='rgba(59,130,246,0.55)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background='rgba(59,130,246,0.06)'; e.currentTarget.style.borderColor='rgba(59,130,246,0.28)'; }}>
             <Download size={13} /> {tn.download}
-          </button>
+          </a>
         </div>
       </div>
 
@@ -149,6 +150,7 @@ function Header({ lang, setLang }) {
           style={{ fontFamily:"'Space Grotesk',sans-serif" }}>{t.title}</h1>
         <p className="text-lg font-medium mb-2" style={{ color:'rgba(147,197,253,0.8)' }}>{t.subtitle}</p>
         <p className="text-[14px]" style={{ color:'rgba(148,163,184,0.6)' }}>{t.byline}</p>
+        <p className="text-[12px] mt-3 italic" style={{ color:'rgba(148,163,184,0.4)' }}>{t.note}</p>
       </div>
 
       <motion.div className="mt-10 h-px"
@@ -168,7 +170,15 @@ function CorePrinciples() {
     <Section id="principles">
       <SectionLabel text={tp.sectionLabel} />
       <SectionTitle>{tp.title}</SectionTitle>
-      <p className="text-[14px] mb-2 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{tp.body}</p>
+      <p className="text-[14px] mb-4 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{tp.body}</p>
+      {/* Document scope note */}
+      <div className="flex gap-3 rounded-xl px-5 py-3.5 mb-2"
+        style={{ background:'rgba(96,165,250,0.06)', border:'1px solid rgba(96,165,250,0.18)' }}>
+        <div className="w-1 rounded-full flex-shrink-0" style={{ background:'rgba(96,165,250,0.5)' }} />
+        <p className="text-[12.5px] leading-relaxed" style={{ color:'rgba(148,163,184,0.85)' }}>
+          <span className="font-bold" style={{ color:'rgba(147,197,253,0.9)' }}>Scope note: </span>{tp.scopeNote}
+        </p>
+      </div>
       <Divider />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {tp.items.map((text, i) => {
@@ -499,6 +509,42 @@ function NinetyDays() {
   );
 }
 
+/* ─── Hard Questions ─────────────────────────────────────────────────────────── */
+function HardQuestions() {
+  const lang = useLang();
+  const th = T[lang].hardQ;
+  return (
+    <Section id="hardq">
+      <SectionLabel text={th.sectionLabel} />
+      <SectionTitle>{th.title}</SectionTitle>
+      <p className="text-[14px] mb-2 max-w-2xl" style={{ color:'rgba(148,163,184,0.8)' }}>{th.body}</p>
+      <Divider />
+      <div className="space-y-4">
+        {th.items.map(({ q, a }, i) => (
+          <motion.div key={i}
+            initial={{ opacity:0, x:-16 }} whileInView={{ opacity:1, x:0 }}
+            viewport={{ once:true }} transition={{ delay:i*0.1 }}
+            className="rounded-xl overflow-hidden"
+            style={{ border:`1px solid ${HQ_COLORS[i]}35` }}>
+            <div className="px-5 py-3 flex items-start gap-3"
+              style={{ background:`${HQ_COLORS[i]}10`, borderBottom:`1px solid ${HQ_COLORS[i]}20` }}>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-black"
+                style={{ background:`${HQ_COLORS[i]}20`, border:`1px solid ${HQ_COLORS[i]}45`, color:HQ_COLORS[i] }}>Q</div>
+              <p className="text-[14px] font-semibold leading-snug" style={{ color:HQ_COLORS[i] }}>{q}</p>
+            </div>
+            <div className="px-5 py-4 flex items-start gap-3"
+              style={{ background:'rgba(5,11,22,0.75)' }}>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-black"
+                style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(148,163,184,0.7)' }}>A</div>
+              <p className="text-[13px] leading-relaxed" style={{ color:'rgba(203,213,225,0.82)' }}>{a}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 /* ─── Commitment ─────────────────────────────────────────────────────────────── */
 function Commitment() {
   const lang = useLang();
@@ -573,6 +619,7 @@ export default function App() {
           <ScheduleMargin />
           <Validation />
           <NinetyDays />
+          <HardQuestions />
           <Commitment />
           <Footer />
         </div>
